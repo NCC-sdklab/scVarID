@@ -96,7 +96,7 @@ def save_classification_matrices(
                 key = (variant_idx, barcode_idx)
                 count_dict[key] += 1  # Increment read count
             else:
-                logging.warning(f"Variant '{variant}' or barcode '{barcode}' not found in mapping dictionaries.")
+                #logging.warning(f"Variant '{variant}' or barcode '{barcode}' not found in mapping dictionaries.")
                 continue
     
         for (variant_idx, barcode_idx), count in count_dict.items():
