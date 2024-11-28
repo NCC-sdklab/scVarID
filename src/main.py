@@ -85,7 +85,7 @@ def main():
     log_step_end(step_name, start_time)
     
     # 3. Create a mapping dictionary for Read_Name and Read_Unique_Name
-    step_name = "Create a mapping dictionary for Read_Name and Read_Unique_Name"
+    step_name = "Process classification"
     start_time = log_step_start(step_name)
     read_mapping = create_read_mapping(df_reads)
     
