@@ -30,9 +30,6 @@ scVarID
 git clone https://github.com/NCC-sdklab/scVarID.git
 cd scVarID
 ```
-<pre data-lang="bash">
-<code>git clone https://github.com/NCC-sdklab/scVarID.git</code>
-</pre>
 2. **Install Dependencies**
 ```bash
 pip install -r requirements.txt
@@ -49,3 +46,35 @@ scVarID is a command-line tool. Below are instructions on how to use it effectiv
 * `--save-dir`: **(Required)** Directory where the results will be saved.
 * `--num-cores`: **(Optional)** Number of CPU cores to use for parallel processing. Default is `4`.
 * `--ref-alt-only`: **(Optional)** If set, only ref and alt classifications will be computed, skipping missing and unknown.
+## Example
+```bash
+python main.py \
+  --variant-files normal variants_normal.vcf tumor variants_tumor.vcf \
+  --bam-path sample.bam \
+  --barcode-path barcodes.txt \
+  --save-dir results \
+  --num-cores 8
+```
+### Explanation:
+* Processes two variants files:
+    * `variant_normal.vcf` with sample `normal`
+    * `variant_tumor.vcf` with sample `tumor`
+* Uses `sample.bam` as the BAM file.
+* Reads barcodes from `barcodes.txt`
+* Saves all outputs to the `results` directory.
+* Utilizes `8` CPU cores for parallel processing.
+### Running with one variant file
+(edit)
+### Running without barcode file
+If you do not have a barcode file, you can omit the `--barcode-path` argument:
+```bash
+python main.py \
+  --variant-files normal variants_normal.vcf tumor variants_tumor.vcf \
+  --bam-path sample.bam \
+  --save-dir results \
+  --num-cores 8
+```
+## Project Structure
+```
+scVarID/ ├── README.md ├── src/ │ ├── classification.py │ ├── main.py │ ├── read_processing.py │ ├── utils.py │ ├── variant_processing.py │ └── requirements.txt └── results/ ├── processing.log ├── ref_matrix.h5 ├── alt_matrix.h5 ├── missing_matrix.h5 ├── unknown_matrix.h5 └── variant_barcode_mappings.pkl
+```
