@@ -8,7 +8,7 @@ from utils import (
     setup_logging, 
     log_step_start, 
     log_step_end,
-    parse_arguments  # 추가된 함수
+    parse_arguments
 )
 from variant_processing import process_vcf_files
 from read_processing import (
@@ -40,14 +40,11 @@ def main():
     setup_logging(save_dir)
     
     # Log program start
-    logging.info("=== [scVarID] Program Started ===")
+    logging.info("=== [scVarID] Program Started ===\n")
     
     try:
         # 0. Verify and adjust num_cores
-        step_name = "Verify and adjust number of cores"
-        start_time = log_step_start(step_name)
         num_cores = check_num_cores(num_cores)
-        log_step_end(step_name, start_time)
         
         # 1. Process variant files
         step_name = "Process variant files"
