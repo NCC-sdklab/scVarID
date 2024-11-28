@@ -38,23 +38,24 @@ def main():
     
     # Configure logging
     setup_logging(save_dir)
+
+    # Verify and adjust num_cores
+    num_cores = check_num_cores(num_cores)
     
     # Log program start
     logging.info("=== [scVarID] Program Started ===\n")
     
     try:
-        # 0. Verify and adjust num_cores
-        num_cores = check_num_cores(num_cores)
-        
         # 1. Process variant files
         step_name = "Process variant files"
         start_time = log_step_start(step_name)
         union_variants = process_vcf_files(vcf_files_with_origins)
         log_step_end(step_name, start_time)
         
-        # 2-1. Extract read information from the BAM file
-        step_name = "Extract read information from the BAM file"
+        # 2. Process BAM file
+        step_name = "Process BAM file"
         start_time = log_step_start(step_name)
+        # 2-1. Extract read information from the BAM file
         df_reads = extract_reads_info(bam_path)
         # 2-2. Create a mapping dictionary for Read_Name and Read_Unique_Name
         read_mapping = create_read_mapping(df_reads)
@@ -63,13 +64,10 @@ def main():
         # 3. Classification process
         step_name = "Classification process"    
         start_time = log_step_start(step_name)
-
         # 3-1. Add overlap information between reads and variants
         df_reads, selected_read_unique_names = process_reads_and_variants(df_reads, union_variants)
-        
         # 3-2. Add overlap information between variants and reads
         updated_union_variants, selected_variants = process_variants_and_reads(union_variants, df_reads)
-        
         # 3-3. Call parallel processing function for classification
         ref_classifications, alt_classifications, missing_classifications, unknown_classifications = process_bam_data_parallel(
             bam_path,
@@ -79,7 +77,6 @@ def main():
             num_cores=num_cores,
             compute_missing_unknown=compute_missing_unknown
         )
-
         log_step_end(step_name, start_time)
         
         # 4. Save classification results
