@@ -15,7 +15,7 @@ scVarID
 - [Contact](#contact)
 
 ## Features
-* **Variant Processing** Handles multiple variant file formats (VCF, BCF, TXT) and filters variants based on specific criteria.
+* **Variant Processing** Handles multiple variant file formats (VCF[.gz], BCF, TXT) and filters variants based on specific criteria.
 * **Read Extraction**: Extracts detailed read information from BAM files, including cell barcodes.
 * **Classification**: Categorizes reads into ref, alt, missing, or unknown using parallel processing for enhanced performance.
 * **Logging**: Comprehensive logging to monitor progress and debug issues.
@@ -128,11 +128,13 @@ scVarID utilizes Python's `logging` module to provide detailed logs of the pipel
 ```
 2024-11-28 10:00:00,000:INFO:=== [scVarID] Program Started ===
 
-2024-11-28 10:00:00,001:INFO:=== Step Start: Process variant files ===
-2024-11-28 10:05:30,500:INFO:Extracted 1500 variants from variants_normal.vcf
-2024-11-28 10:05:30,501:INFO:Extracted 2000 variants from variants_tumor.vcf
-2024-11-28 10:05:30,502:INFO:Filtered variants count: 3000
-2024-11-28 10:05:30,503:INFO:=== Step End: Process variant files | Elapsed Time: 00h 00m 03s ===
+2024-11-23 10:00:00,000:INFO:=== Step Start: Process variant files ===
+2024-11-23 10:00:00,268:INFO:Processing VCF/BCF file: variants_normal.vcf
+2024-11-23 10:00:01,346:INFO:Extracted 20000 variants from variants_normal.vcf
+2024-11-23 10:00:01,348:INFO:Processing VCF/BCF file: variants_tumor.vcf
+2024-11-23 10:00:02,360:INFO:Extracted 20000 variants from variants_tumor.vcf
+2024-11-23 10:00:02,678:INFO:Filtered variants count: 25000
+2024-11-23 10:00:02,700:INFO:=== Step End: Process variant files | Elapsed Time: 00h 00m 02s ===
 ...
 2024-11-28 10:20:30,003:INFO:=== All steps completed successfully ===
 ```
