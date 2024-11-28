@@ -11,7 +11,7 @@ scVarID
 - [Project Structure](#project-structure)
 - [Dependencies](#dependencies)
 - [Logging](#logging)
-- [Contributing](#contributing)
+- [License](#License)
 - [Contact](#contact)
 
 ## Features
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 ## Usage
 scVarID is a command-line tool. Below are instructions on how to use it effectively.
 ### Command-Line Arguments
-* `--variant-files`: **(Required)** List of sample and variant file path pairs. Each origin must be paired with a file path.
+* `--variant-files`: **(Required)** List of sample and variant file path pairs. Each origin must be paired with a file path. **At least one sample-file pair is required.**
     * **Format**: `SAMPLE1 FILE_PATH1 SAMPLE2 FILE_PATH2 ...`
     * **Example Samples**: `normal`, `tumor`, `HG002`
 * `--bam-path`: **(Required)** Path to the BAM file.
@@ -47,7 +47,7 @@ scVarID is a command-line tool. Below are instructions on how to use it effectiv
 * `--ref-alt-only`: **(Optional)** If set, only ref and alt classifications will be computed, skipping missing and unknown.
 ### Example
 ```bash
-python main.py \
+python src/main.py \
   --variant-files normal variants_normal.vcf tumor variants_tumor.vcf \
   --bam-path sample.bam \
   --barcode-path barcodes.txt \
@@ -56,18 +56,26 @@ python main.py \
 ```
 #### Explanation:
 * Processes two variants files:
-    * `variant_normal.vcf` with sample `normal`
-    * `variant_tumor.vcf` with sample `tumor`
+    * `variants_normal.vcf` with sample `normal`
+    * `variants_tumor.vcf` with sample `tumor`
 * Uses `sample.bam` as the BAM file.
 * Reads barcodes from `barcodes.txt`
 * Saves all outputs to the `results` directory.
 * Utilizes `8` CPU cores for parallel processing.
 #### Running with one variant file
-(Edit)
+If you only have one variant file, you can provide a single sample and file pair:
+```bash
+python src/main.py \
+  --variant-files normal variants_normal.vcf \
+  --bam-path sample.bam \
+  --barcode-path barcodes.txt \
+  --save-dir results \
+  --num-cores 4
+```
 #### Running without barcode file
 If you do not have a barcode file, you can omit the `--barcode-path` argument:
 ```bash
-python main.py \
+python src/main.py \
   --variant-files normal variants_normal.vcf tumor variants_tumor.vcf \
   --bam-path sample.bam \
   --save-dir results \
@@ -83,8 +91,8 @@ scVarID/
 │   ├── classification.py
 │   ├── main.py
 │   ├── read_processing.py
-│   ├── variant_processing.py
-│   └── utils.py
+│   ├── utils.py
+│   └── variant_processing.py
 └── results/
     ├── processing.log
     ├── ref_matrix.h5
@@ -111,12 +119,14 @@ pip install -r requirements.txt
 
 ## Logging
 scVarID utilizes Python's `logging` module to provide detailed logs of the pipeline's execution. Logs are saved both to the console and to a log file named `processing.log` within the specified `--save-dir`.
+
 **Log Levels:**
 * `INFO`: General progress and import milestones.
 * `WARNING`: Issues that do not halt the pipeline but may require attention.
 * `ERROR`: Critical issues that cause the pipeline to terminate.
+
 **Example Log Entries:**
-```yaml
+```
 2024-11-28 10:00:00,000:INFO:=== [scVarID] Program Started ===
 
 2024-11-28 10:00:00,001:INFO:=== Step Start: Process variant files ===
@@ -128,7 +138,7 @@ scVarID utilizes Python's `logging` module to provide detailed logs of the pipel
 2024-11-28 10:20:30,003:INFO:=== All steps completed successfully ===
 ```
 
-## Contributing
+## License
 (Edit)
 
 ## Contact
