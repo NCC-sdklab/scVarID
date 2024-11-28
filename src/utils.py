@@ -1,16 +1,55 @@
 # utils.py
 
+import os
+import time
 import multiprocessing
 import logging
+from logging.handlers import RotatingFileHandler
 import h5py
 from collections import defaultdict
 import joblib
 from scipy.sparse import csr_matrix
 
+def setup_logging(save_dir):
+    """
+    Initializes the logging settings.
+    Sets up both log file and console output.
+    """
+    log_file = os.path.join(save_dir, 'processing.log')
+    
+    # Use RotatingFileHandler to limit log file size and create backups
+    handler = RotatingFileHandler(log_file, maxBytes=10**7, backupCount=5)
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s:%(levelname)s:%(message)s',
+        handlers=[
+            handler,
+            logging.StreamHandler()
+        ]
+    )
+
+def log_step_start(step_name):
+    """
+    Logs the start of a step and returns the start time.
+    """
+    logging.info(f"=== Step Start: {step_name} ===")
+    return time.time()
+
+def log_step_end(step_name, start_time):
+    """
+    Logs the end of a step, calculates the elapsed time, and logs it.
+    Formats the elapsed time as "00h 00m 00s".
+    """
+    end_time = time.time()
+    duration = end_time - start_time
+    formatted_duration = time.strftime("%Hh %Mm %Ss", time.gmtime(duration))
+    logging.info(f"=== Step End: {step_name} | Elapsed Time: {formatted_duration} ===\n")
+
 def check_num_cores(num_cores):
     max_cores = multiprocessing.cpu_count()
     if num_cores > max_cores:
-        print(f"Warning: Specified number of cores ({num_cores}) exceeds available cores ({max_cores}). Using {max_cores} cores instead.")
+        logging.info(f"Warning: Specified number of cores ({num_cores}) exceeds available cores ({max_cores}). Using {max_cores} cores instead.")
         num_cores = max_cores
     return num_cores
 
@@ -21,7 +60,7 @@ def read_barcodes_from_file(barcode_path):
     if barcode_path:
         with open(barcode_path, 'r') as f:
             barcodes = [line.strip() for line in f if line.strip()]
-        print(f"Total barcodes from file: {len(barcodes)}")
+        logging.info(f"Total barcodes from file: {len(barcodes)}")
         return barcodes
     else:
         return None  # Return None if barcode file is not provided
@@ -41,7 +80,7 @@ def save_classification_matrices(
     # Extract variant list
     variants = [f"{variant['CHROM']}:{variant['POS']}_{variant['REF']}->{variant['ALT']}" for variant in union_variants]
     
-    print(f"Total variants: {len(variants)}")
+    #logging.info(f"Total variants: {len(variants)}")
     
     # Create mapping dictionaries
     variant_to_index = {variant: idx for idx, variant in enumerate(variants)}
@@ -67,7 +106,7 @@ def save_classification_matrices(
                 barcode = classification_dict['cell_barcode']
                 barcode_set.add(barcode)
         barcodes = sorted(barcode_set)
-        print(f"Total barcodes generated from data: {len(barcodes)}")
+        logging.info(f"# Total barcodes generated from data: {len(barcodes)}")
     
     barcode_to_index = {barcode: idx for idx, barcode in enumerate(barcodes)}
     
@@ -76,7 +115,7 @@ def save_classification_matrices(
     
     for classification_name, classifications in classifications_dict.items():
         if not classifications:
-            print(f"No data for classification '{classification_name}'. Skipping.")
+            logging.info(f"No data for classification '{classification_name}'. Skipping.")
             continue  # Skip if no data
         
         data = []

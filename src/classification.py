@@ -1,5 +1,6 @@
 # classification.py
 
+import logging
 import re
 from collections import defaultdict
 from joblib import Parallel, delayed

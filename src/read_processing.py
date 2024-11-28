@@ -1,5 +1,6 @@
 # read_processing.py
 
+import logging
 import pandas as pd
 import pysam
 import pyranges as pr
@@ -47,6 +48,7 @@ def extract_reads_info(bam_file):
     
     # Convert to a DataFrame
     df_reads = pd.DataFrame(data, columns=["Read_Name", "Read_Unique_Name", "Cell_Barcode", "Chromosome", "Start_Position", "End_Position"])
+    logging.info(f"Extracted {len(df_reads)} reads from BAM file: {bam_file}")
     return df_reads
 
 def create_read_mapping(df_reads):
@@ -129,7 +131,7 @@ def process_reads_and_variants(df_reads, union_variants):
 
     # Output mappable read statistics
     percentage_mappable = (100 * num_non_empty_vindex) / total_rows if total_rows > 0 else 0
-    print(f"# mappable reads: {num_non_empty_vindex} ({percentage_mappable:.2f}%)")
+    logging.info(f"# mappable reads: {num_non_empty_vindex} ({percentage_mappable:.2f}%)")
 
     # Extract Read_Unique_Name with non-empty VINDEX
     selected_read_unique_names = df_reads[df_reads['VINDEX'] != '']['Read_Unique_Name'].tolist()
@@ -215,7 +217,7 @@ def process_variants_and_reads(union_variants, df_reads):
     
     # Output mappable variant statistics
     percentage_mappable = (100 * num_non_empty_readnames) / total_variants if total_variants > 0 else 0
-    print(f"# mappable variants: {num_non_empty_readnames} ({percentage_mappable:.2f}%)")
+    logging.info(f"# mappable variants: {num_non_empty_readnames} ({percentage_mappable:.2f}%)")
     
     # Select variants with non-empty Read_Names
     selected_variants = [variant for variant in updated_union_variants if variant.get('Read_Names')]

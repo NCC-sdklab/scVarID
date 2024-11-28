@@ -5,10 +5,20 @@ import logging
 import argparse
 
 from variant_processing import process_vcf_files
-from read_processing import extract_reads_info, create_read_mapping, process_reads_and_variants
-from read_processing import process_variants_and_reads
+from read_processing import (
+    extract_reads_info, 
+    create_read_mapping, 
+    process_reads_and_variants, 
+    process_variants_and_reads
+)
 from classification import process_bam_data_parallel
-from utils import check_num_cores, save_classification_matrices
+from utils import (
+    check_num_cores, 
+    save_classification_matrices, 
+    setup_logging, 
+    log_step_start, 
+    log_step_end
+)
 
 def main():
     # Create an ArgumentParser object
@@ -57,25 +67,26 @@ def main():
         os.makedirs(save_dir)
     
     # Configure logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s:%(levelname)s:%(message)s',
-        handlers=[
-            logging.FileHandler(os.path.join(save_dir, 'processing.log')),
-            logging.StreamHandler()
-        ]
-    )
+    setup_logging(save_dir)
     
     # 0. Verify and adjust num_cores
     num_cores = check_num_cores(num_cores)
     
     # 1. Process variant files
+    step_name = "Process variant files"
+    start_time = log_step_start(step_name)
     union_variants = process_vcf_files(vcf_files_with_origins)
+    log_step_end(step_name, start_time)
     
     # 2. Extract read information from the BAM file
+    step_name = "Extract read information from the BAM file"
+    start_time = log_step_start(step_name)
     df_reads = extract_reads_info(bam_path)
+    log_step_end(step_name, start_time)
     
     # 3. Create a mapping dictionary for Read_Name and Read_Unique_Name
+    step_name = "Create a mapping dictionary for Read_Name and Read_Unique_Name"
+    start_time = log_step_start(step_name)
     read_mapping = create_read_mapping(df_reads)
     
     # 4. Add overlap information between reads and variants
@@ -93,8 +104,11 @@ def main():
         num_cores=num_cores,
         compute_missing_unknown=compute_missing_unknown
     )
+    log_step_end(step_name, start_time)
     
     # 7. Save classification results
+    step_name = "Save classification results"
+    start_time = log_step_start(step_name)
     save_classification_matrices(
         save_dir=save_dir,
         union_variants=union_variants,
@@ -104,6 +118,7 @@ def main():
         missing_classifications=missing_classifications if compute_missing_unknown else None,
         unknown_classifications=unknown_classifications if compute_missing_unknown else None
     )
+    log_step_end(step_name, start_time)
 
 if __name__ == '__main__':
     main()

@@ -39,6 +39,7 @@ def extract_variants_vcf(vcf_file, origin):
     except Exception as e:
         logging.warning(f"An unexpected error occurred while processing {vcf_file}: {e}")
 
+    logging.info(f"Extracted {len(formatted_variants)} variants from {vcf_file}")
     return formatted_variants
 
 def extract_variants_txt(txt_file, origin):
@@ -70,9 +71,9 @@ def extract_variants_txt(txt_file, origin):
             }
             formatted_variants.append(variant)
     except Exception as e:
-        print(f"Warning: Skipping file {txt_file} due to error: {e}")
         logging.warning(f"Skipping file {txt_file} due to error: {e}")
-    
+
+    logging.info(f"Extracted {len(formatted_variants)} variants from {txt_file}")
     return formatted_variants
 
 def filter_variants(variants):
@@ -111,7 +112,8 @@ def filter_variants(variants):
 
     for idx, variant in enumerate(union_variants, 1):
         variant['VINDEX'] = f'vi_{idx}'
-    
+
+    logging.info(f"Filtered variants count: {len(union_variants)}")
     return union_variants
 
 def process_vcf_files(vcf_files_with_origins):
@@ -122,13 +124,12 @@ def process_vcf_files(vcf_files_with_origins):
     
     for file_path, origin in vcf_files_with_origins:
         if is_vcf_file(file_path):
-            print(f"Processing VCF/BCF file: {file_path}")
+            logging.info(f"Processing VCF/BCF file: {file_path}")
             variants = extract_variants_vcf(file_path, origin)
         elif file_path.endswith('.txt'):
-            print(f"Processing TXT file: {file_path}")
+            logging.info(f"Processing TXT file: {file_path}")
             variants = extract_variants_txt(file_path, origin)
         else:
-            print(f"Warning: Skipping unsupported file format: {file_path}")
             logging.warning(f"Skipping unsupported file format: {file_path}")
             continue  # Skip unsupported file formats
         
