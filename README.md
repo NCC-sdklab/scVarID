@@ -30,6 +30,9 @@ scVarID
 git clone https://github.com/NCC-sdklab/scVarID.git
 cd scVarID
 ```
+<pre data-lang="bash">
+<code>git clone https://github.com/NCC-sdklab/scVarID.git</code>
+</pre>
 2. **Install Dependencies**
 ```bash
 pip install -r requirements.txt
