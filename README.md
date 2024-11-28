@@ -136,7 +136,7 @@ scVarID utilizes Python's `logging` module to provide detailed logs of the pipel
 2024-11-23 10:00:02,678:INFO:Filtered variants count: 25000
 2024-11-23 10:00:02,700:INFO:=== Step End: Process variant files | Elapsed Time: 00h 00m 02s ===
 ...
-2024-11-28 10:20:30,003:INFO:=== All steps completed successfully ===
+2024-11-23 10:20:30,003:INFO:=== All steps completed successfully ===
 ```
 
 ## License
