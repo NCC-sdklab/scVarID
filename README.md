@@ -76,5 +76,20 @@ python main.py \
 ```
 ## Project Structure
 ```
-scVarID/ ├── README.md ├── src/ │ ├── classification.py │ ├── main.py │ ├── read_processing.py │ ├── utils.py │ ├── variant_processing.py │ └── requirements.txt └── results/ ├── processing.log ├── ref_matrix.h5 ├── alt_matrix.h5 ├── missing_matrix.h5 ├── unknown_matrix.h5 └── variant_barcode_mappings.pkl
+scVarID/
+├── README.md
+├── src/
+│   ├── classification.py
+│   ├── main.py
+│   ├── read_processing.py
+│   ├── utils.py
+│   ├── variant_processing.py
+│   └── requirements.txt
+└── results/
+    ├── processing.log
+    ├── ref_matrix.h5
+    ├── alt_matrix.h5
+    ├── missing_matrix.h5
+    ├── unknown_matrix.h5
+    └── variant_barcode_mappings.pkl
 ```
