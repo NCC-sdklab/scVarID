@@ -6,7 +6,7 @@ scVarID
 * Features
 * Installation
 * Usage
-    * Command_line Arguments
+    * Command-Line Arguments
     * Example
 * Project Structure
 * Dependencies
@@ -30,4 +30,15 @@ scVarID
 git clone https://gihub.com/NCC-sdklab/scVarID.git
 cd scVarID
 ```
+2. **Install Dependencies**
+```bash
+pip install -r requirements.txt
+```
 
+## Usage
+scVarID is a command-line tool. Below are instructions on how to use it effectively.
+### Command-Line Arguments
+* `--variant-files`: **(Required)** List of sample and variant file path pairs. Each origin must be paried with a file path.
+    * **Format**: `SAMPLE1 FILE_PATH1 SAMPLE2 FILE_PATH2 ...`
+    * **Eample Samples: `normal`, `tumor`, `HG002`
+* `--bam-path`: **(Required)** 
