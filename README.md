@@ -17,7 +17,6 @@ scVarID
 ## Features
 * **Variant Processing** Handles multiple variant file formats (VCF, BCF, TXT) and filters variants based on specific criteria.
 * **Read Extraction**: Extracts detailed read information from BAM files, including cell barcodes.
-* **Overlap Analysis**: Utilizes PyRanges for efficient overlap detection between reads and variants.
 * **Classification**: Categorizes reads into ref, alt, missing, or unknown using parallel processing for enhanced performance.
 * **Logging**: Comprehensive logging to monitor progress and debug issues.
 * **Scalable**: Supports parallel processing to handle large datasets efficiently.
