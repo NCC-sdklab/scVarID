@@ -1,3 +1,7 @@
+# Byte-complied / optimized /DLL files
 __pycache__/
 *.pyc
 .DS_Store
+
+# test file
+results/
