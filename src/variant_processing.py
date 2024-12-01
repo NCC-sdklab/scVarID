@@ -116,7 +116,30 @@ def filter_variants(variants):
     logging.info(f"Filtered variants count: {len(union_variants)}")
     return union_variants
 
-def process_vcf_files(vcf_files_with_origins):
+# def process_vcf_files(vcf_files_with_origins):
+#     """
+#     Process multiple VCF/BCF or pre-filtered TXT files and return union_variants.
+#     """
+#     all_variants = []
+    
+#     for file_path, origin in vcf_files_with_origins:
+#         if is_vcf_file(file_path):
+#             logging.info(f"Processing VCF/BCF file: {file_path}")
+#             variants = extract_variants_vcf(file_path, origin)
+#         elif file_path.endswith('.txt'):
+#             logging.info(f"Processing TXT file: {file_path}")
+#             variants = extract_variants_txt(file_path, origin)
+#         else:
+#             logging.warning(f"Skipping unsupported file format: {file_path}")
+#             continue  # Skip unsupported file formats
+        
+#         all_variants.extend(variants)
+    
+#     union_variants = filter_variants(all_variants)
+    
+#     return union_variants
+
+def process_vcf_files(vcf_files_with_origins, chromosomes=None):
     """
     Process multiple VCF/BCF or pre-filtered TXT files and return union_variants.
     """
@@ -132,34 +155,13 @@ def process_vcf_files(vcf_files_with_origins):
         else:
             logging.warning(f"Skipping unsupported file format: {file_path}")
             continue  # Skip unsupported file formats
+
+        # Filter by chromosomes if specified
+        if chromosomes:
+            variants = [variant for variant in variants if variant['CHROM'] in chromosomes]
         
         all_variants.extend(variants)
     
     union_variants = filter_variants(all_variants)
     
     return union_variants
-
-def extract_variants_for_chromosome(vcf_file, origin, chromosome):
-    """Extract variants for a specific chromosome from a VCF file."""
-    formatted_variants = []
-    try:
-        with pysam.VariantFile(vcf_file) as vcf:
-            for record in vcf.fetch(chromosome):
-                if "PASS" in record.filter:
-                    chrom = record.chrom
-                    pos = record.pos
-                    ref = record.ref
-                    alts = ",".join(record.alts) if record.alts else []
-                    variant = {
-                        "CHROM": chrom,
-                        "POS": pos,
-                        "REF": ref,
-                        "ALT": alts,
-                        "ORIGIN": origin
-                    }
-                    formatted_variants.append(variant)
-    except Exception as e:
-        logging.warning(f"Error processing {vcf_file} for chromosome {chromosome}: {e}")
-
-    logging.info(f"Extracted {len(formatted_variants)} variants from {vcf_file} for chromosome {chromosome}")
-    return formatted_variants

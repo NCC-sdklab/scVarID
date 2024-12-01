@@ -12,43 +12,6 @@ from scipy.sparse import csr_matrix
 import argparse
 import pysam
 
-# def parse_arguments():
-#     """
-#     Parses command-line arguments and returns them along with variant file origins.
-#     """
-#     parser = argparse.ArgumentParser(description='Process variant files and BAM files.')
-    
-#     # Add argument for variant files
-#     parser.add_argument('--variant-files', nargs='+', required=True, metavar=('ORIGIN', 'FILE_PATH'),
-#                         help='List of origin and variant file path pairs.')
-    
-#     # Add arguments for BAM file, barcode file, and save directory
-#     parser.add_argument('--bam-path', required=True, help='Path to the BAM file.')
-#     parser.add_argument('--barcode-path', required=False, help='Path to the barcode file (optional).')
-#     parser.add_argument('--save-dir', required=True, help='Save directory path.')
-    
-#     # Add argument for number of cores
-#     parser.add_argument('--num-cores', type=int, default=4, help='Number of cores to use for parallel processing.')
-    
-#     # Add action
-#     parser.add_argument('--ref-alt-only', action='store_true',
-#                         help='Compute only ref and alt classifications, skipping missing and unknown.')
-    
-#     # Parse arguments
-#     args = parser.parse_args()
-    
-#     # Generate list of variant files
-#     vcf_files_with_origins = []
-#     if len(args.variant_files) % 2 != 0:
-#         parser.error('Each origin must be paired with a file path in --variant-files.')
-    
-#     for i in range(0, len(args.variant_files), 2):
-#         origin = args.variant_files[i]
-#         file_path = args.variant_files[i + 1]
-#         vcf_files_with_origins.append((file_path, origin))
-    
-#     return args, vcf_files_with_origins
-
 def parse_arguments():
     """
     Parses command-line arguments and returns them along with variant file origins.
@@ -71,10 +34,6 @@ def parse_arguments():
     parser.add_argument('--ref-alt-only', action='store_true',
                         help='Compute only ref and alt classifications, skipping missing and unknown.')
     
-    # Add argument for chromosomes
-    parser.add_argument('--chromosomes', nargs='+', required=False,
-                        help='List of chromosomes to process (e.g., chr1 chr2). If not specified, process all.')
-
     # Parse arguments
     args = parser.parse_args()
     
@@ -89,7 +48,6 @@ def parse_arguments():
         vcf_files_with_origins.append((file_path, origin))
     
     return args, vcf_files_with_origins
-
 
 def setup_logging(save_dir):
     """

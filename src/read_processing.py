@@ -17,7 +17,7 @@ def calculate_end_position_cigar(read):
             ref_pos += length
     return ref_pos
 
-def extract_reads_info(bam_file):
+def extract_reads_info(bam_file, chromosomes=None):
     """
     Extract read information from a BAM file.
     """
@@ -32,6 +32,11 @@ def extract_reads_info(bam_file):
                 continue  # Skip reads without a "CB" tag
             
             chrom = bam.get_reference_name(read.reference_id)
+            
+            # Skip reads that are not in the specified chromosomes
+            if chromosomes and chrom not in chromosomes:
+                continue
+            
             start_pos = read.reference_start
             end_pos = calculate_end_position_cigar(read)  # Helper function to compute end position
             read_name = read.query_name
@@ -224,22 +229,3 @@ def process_variants_and_reads(union_variants, df_reads):
     
     return updated_union_variants, selected_variants
 
-def extract_reads_for_chromosome(bam_file, chromosome):
-    """
-    Extract read information from a specific chromosome in a BAM file.
-    """
-    data = []
-    with pysam.AlignmentFile(bam_file, "rb") as bam:
-        for read in bam.fetch(chromosome):
-            try:
-                barcode = read.get_tag("CB")  # Extract "CB" tag for cell barcode
-            except KeyError:
-                continue
-            chrom = bam.get_reference_name(read.reference_id)
-            start_pos = read.reference_start
-            end_pos = calculate_end_position_cigar(read)
-            read_name = read.query_name
-            data.append([read_name, barcode, chrom, start_pos, end_pos])
-    df_reads = pd.DataFrame(data, columns=["Read_Name", "Cell_Barcode", "Chromosome", "Start_Position", "End_Position"])
-    logging.info(f"Extracted {len(df_reads)} reads from BAM file: {bam_file} for chromosome {chromosome}")
-    return df_reads

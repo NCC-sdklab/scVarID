@@ -1,5 +1,3 @@
-# main.py
-
 import os
 import logging
 from utils import (
@@ -8,70 +6,30 @@ from utils import (
     setup_logging, 
     log_step_start, 
     log_step_end,
-    parse_arguments,
-    get_all_chromosomes  # 염색체 목록 추출 함수 추가
+    parse_arguments
 )
-from variant_processing import process_vcf_files, extract_variants_for_chromosome  # 염색체별 변이 처리 함수 추가
+from variant_processing import process_vcf_files
 from read_processing import (
-    extract_reads_for_chromosome,  # 염색체별 리드 처리 함수 추가
+    extract_reads_info, 
     create_read_mapping, 
     process_reads_and_variants, 
     process_variants_and_reads
 )
-from classification import process_bam_data_parallel  # 병렬 처리는 기존 유지
-from joblib import Parallel, delayed  # 병렬 처리를 위한 라이브러리
-
-def process_chromosome(chromosome, args, vcf_files_with_origins):
-    """
-    Process a single chromosome and save results.
-    """
-    logging.info(f"=== Start processing chromosome {chromosome} ===")
-
-    # 1. Process variants for the current chromosome
-    union_variants = []
-    for file_path, origin in vcf_files_with_origins:
-        variants = extract_variants_for_chromosome(file_path, origin, chromosome)
-        union_variants.extend(variants)
-    
-    # 2. Process BAM file for the current chromosome
-    df_reads = extract_reads_for_chromosome(args.bam_path, chromosome)
-    read_mapping = create_read_mapping(df_reads)
-
-    # 3. Classification process
-    df_reads, selected_read_unique_names = process_reads_and_variants(df_reads, union_variants)
-    updated_union_variants, selected_variants = process_variants_and_reads(union_variants, df_reads)
-
-    ref_classifications, alt_classifications, missing_classifications, unknown_classifications = process_bam_data_parallel(
-        args.bam_path,
-        selected_read_unique_names,
-        selected_variants,
-        read_mapping,
-        num_cores=args.num_cores,
-        compute_missing_unknown=not args.ref_alt_only
-    )
-
-    # 4. Save results for the current chromosome
-    save_classification_matrices(
-        save_dir=os.path.join(args.save_dir, f"chromosome_{chromosome}"),
-        union_variants=updated_union_variants,
-        barcode_path=args.barcode_path,
-        ref_classifications=ref_classifications,
-        alt_classifications=alt_classifications,
-        missing_classifications=missing_classifications if not args.ref_alt_only else None,
-        unknown_classifications=unknown_classifications if not args.ref_alt_only else None
-    )
-
-    logging.info(f"=== Finished processing chromosome {chromosome} ===\n")
-
+from classification import process_bam_data_parallel
 
 def main():
     # Parse arguments
     args, vcf_files_with_origins = parse_arguments()
-
+    
     # Assign other arguments to variables
     bam_path = args.bam_path
+    barcode_path = args.barcode_path
     save_dir = args.save_dir
     num_cores = args.num_cores
+    chromosomes = args.chromosomes  # New argument for chromosomes
+
+    # Set compute_missing_unknown value
+    compute_missing_unknown = not args.ref_alt_only
 
     # Create save directory
     if not os.path.exists(save_dir):
@@ -87,13 +45,52 @@ def main():
     logging.info("=== [scVarID] Program Started ===\n")
     
     try:
-        # Extract list of chromosomes
-        chromosomes = args.chromosomes or get_all_chromosomes(bam_path, [file_path for file_path, _ in vcf_files_with_origins])
+        # 1. Process variant files
+        step_name = "Process variant files"
+        start_time = log_step_start(step_name)
+        union_variants = process_vcf_files(vcf_files_with_origins, chromosomes=chromosomes)
+        log_step_end(step_name, start_time)
+        
+        # 2. Process BAM file
+        step_name = "Process BAM file"
+        start_time = log_step_start(step_name)
+        # 2-1. Extract read information from the BAM file
+        df_reads = extract_reads_info(bam_path, chromosomes=chromosomes)
+        # 2-2. Create a mapping dictionary for Read_Name and Read_Unique_Name
+        read_mapping = create_read_mapping(df_reads)
+        log_step_end(step_name, start_time)
 
-        # Process each chromosome in parallel
-        Parallel(n_jobs=num_cores)(
-            delayed(process_chromosome)(chromosome, args, vcf_files_with_origins) for chromosome in chromosomes
+        # 3. Classification process
+        step_name = "Classification process"    
+        start_time = log_step_start(step_name)
+        # 3-1. Add overlap information between reads and variants
+        df_reads, selected_read_unique_names = process_reads_and_variants(df_reads, union_variants)
+        # 3-2. Add overlap information between variants and reads
+        updated_union_variants, selected_variants = process_variants_and_reads(union_variants, df_reads)
+        # 3-3. Call parallel processing function for classification
+        ref_classifications, alt_classifications, missing_classifications, unknown_classifications = process_bam_data_parallel(
+            bam_path,
+            selected_read_unique_names,
+            selected_variants,
+            read_mapping,
+            num_cores=num_cores,
+            compute_missing_unknown=compute_missing_unknown
         )
+        log_step_end(step_name, start_time)
+        
+        # 4. Save classification results
+        step_name = "Save classification results"
+        start_time = log_step_start(step_name)
+        save_classification_matrices(
+            save_dir=save_dir,
+            union_variants=union_variants,
+            barcode_path=barcode_path,
+            ref_classifications=ref_classifications,
+            alt_classifications=alt_classifications,
+            missing_classifications=missing_classifications if compute_missing_unknown else None,
+            unknown_classifications=unknown_classifications if compute_missing_unknown else None
+        )
+        log_step_end(step_name, start_time)
     
     except Exception as e:
         logging.error(f"An error occurred: {e}", exc_info=True)
