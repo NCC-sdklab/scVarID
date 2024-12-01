@@ -223,3 +223,23 @@ def process_variants_and_reads(union_variants, df_reads):
     selected_variants = [variant for variant in updated_union_variants if variant.get('Read_Names')]
     
     return updated_union_variants, selected_variants
+
+def extract_reads_for_chromosome(bam_file, chromosome):
+    """
+    Extract read information from a specific chromosome in a BAM file.
+    """
+    data = []
+    with pysam.AlignmentFile(bam_file, "rb") as bam:
+        for read in bam.fetch(chromosome):
+            try:
+                barcode = read.get_tag("CB")  # Extract "CB" tag for cell barcode
+            except KeyError:
+                continue
+            chrom = bam.get_reference_name(read.reference_id)
+            start_pos = read.reference_start
+            end_pos = calculate_end_position_cigar(read)
+            read_name = read.query_name
+            data.append([read_name, barcode, chrom, start_pos, end_pos])
+    df_reads = pd.DataFrame(data, columns=["Read_Name", "Cell_Barcode", "Chromosome", "Start_Position", "End_Position"])
+    logging.info(f"Extracted {len(df_reads)} reads from BAM file: {bam_file} for chromosome {chromosome}")
+    return df_reads

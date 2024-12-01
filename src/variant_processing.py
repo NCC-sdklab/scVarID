@@ -138,3 +138,28 @@ def process_vcf_files(vcf_files_with_origins):
     union_variants = filter_variants(all_variants)
     
     return union_variants
+
+def extract_variants_for_chromosome(vcf_file, origin, chromosome):
+    """Extract variants for a specific chromosome from a VCF file."""
+    formatted_variants = []
+    try:
+        with pysam.VariantFile(vcf_file) as vcf:
+            for record in vcf.fetch(chromosome):
+                if "PASS" in record.filter:
+                    chrom = record.chrom
+                    pos = record.pos
+                    ref = record.ref
+                    alts = ",".join(record.alts) if record.alts else []
+                    variant = {
+                        "CHROM": chrom,
+                        "POS": pos,
+                        "REF": ref,
+                        "ALT": alts,
+                        "ORIGIN": origin
+                    }
+                    formatted_variants.append(variant)
+    except Exception as e:
+        logging.warning(f"Error processing {vcf_file} for chromosome {chromosome}: {e}")
+
+    logging.info(f"Extracted {len(formatted_variants)} variants from {vcf_file} for chromosome {chromosome}")
+    return formatted_variants

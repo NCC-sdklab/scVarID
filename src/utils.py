@@ -10,6 +10,7 @@ from collections import defaultdict
 import joblib
 from scipy.sparse import csr_matrix
 import argparse
+import pysam
 
 def parse_arguments():
     """
@@ -195,3 +196,20 @@ def save_classification_matrices(
     
     # Save variant and barcode lists
     joblib.dump((variants, barcodes), f'{save_dir}/variant_barcode_mappings.pkl')
+
+def get_all_chromosomes(bam_path, variant_paths=None):
+    """
+    Automatically extract a list of chromosomes from the BAM file or variant files.
+    """
+    # Extract chromosomes from BAM file
+    with pysam.AlignmentFile(bam_path, "rb") as bam_file:
+        chromosomes = list(bam_file.references)
+
+    # Validate chromosomes with variant files if provided
+    if variant_paths:
+        for variant_path in variant_paths:
+            with pysam.VariantFile(variant_path) as vcf:
+                file_chromosomes = list(vcf.header.contigs.keys())
+                chromosomes = [chrom for chrom in chromosomes if chrom in file_chromosomes]
+
+    return chromosomes
