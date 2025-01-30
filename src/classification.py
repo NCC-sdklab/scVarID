@@ -116,8 +116,12 @@ def process_bam_data_parallel(
     # Chromosome별 window 분할
     windows = []
     with pysam.AlignmentFile(bam_path, "rb") as bam:
-        for chrom in selected_variants['Chromosome'].unique():
+        #for chrom in selected_variants['Chromosome'].unique():
+        #    chrom_len = bam.get_reference_length(chrom)
+        chromosomes = list({v['Chromosome'] for v in selected_variants})  # 중복 제거
+        for chrom in chromosomes:
             chrom_len = bam.get_reference_length(chrom)
+
             for start in range(0, chrom_len, window_size):
                 end = min(start + window_size + padding, chrom_len)
                 windows.append((chrom, start, end))
