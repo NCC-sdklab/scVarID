@@ -144,7 +144,7 @@ def process_bam_data_parallel(
     
     return ref, alt, missing, unknown
 
-def process_window(bam_path, chrom, start, end, variants_dict, read_mapping, compute_missing_unknown):
+def process_window(bam_path, chrom, start, end, variants_dict, read_mapping, selected_reads, compute_missing_unknown):
     """개별 window 처리 함수"""
     window_variants = {k: v for k, v in variants_dict.items() if k[0] == chrom and start <= k[1] <= end}
     
