@@ -82,8 +82,8 @@ def extract_reads_info(bam_file, chromosomes=None, window_size=10_000_000, paddi
                     read_end = calculate_end_position_cigar(read)
                     
                     # 실제 window 범위 필터링 (padding 영역 제외)
-                    #if read_end < win_start or read_start >= (win_start + window_size):
-                    #    continue
+                    if read_end < win_start or read_start >= (win_start + window_size):
+                        continue
                     
                     # Read 정보 저장
                     read_name = read.query_name

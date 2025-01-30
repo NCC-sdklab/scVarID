@@ -259,4 +259,3 @@ def get_all_chromosomes(bam_path, variant_paths=None):
                 chromosomes = [chrom for chrom in chromosomes if chrom in file_chromosomes]
 
     return chromosomes
-    

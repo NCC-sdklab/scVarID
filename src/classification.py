@@ -5,7 +5,6 @@ import re
 from collections import defaultdict
 from joblib import Parallel, delayed
 import pysam
-import tempfile
 
 def split_list(lst, num_sublists):
     avg_size = len(lst) // num_sublists
@@ -17,14 +16,6 @@ def split_list(lst, num_sublists):
         result.append(lst[start:end])
         start = end
     return result
-
-# classification.py 상단에 헤더 처리 함수 추가
-def copy_bam_header(src_path, dest_path):
-    with pysam.AlignmentFile(src_path, "rb") as src:
-        header = src.header.to_dict()
-    with pysam.AlignmentFile(dest_path, "wb", header=header) as dest:
-        pass  # 헤더만 복사
-
 
 def process_read_chunk(
     bam_file_path, 
@@ -38,7 +29,7 @@ def process_read_chunk(
     missing_classifications = []
     unknown_classifications = []
 
-    with pysam.AlignmentFile(bam_file_path, "rb", check_sq=False) as bam_file:
+    with pysam.AlignmentFile(bam_file_path, "rb") as bam_file:
         read_name_to_unique = {}
         for read in bam_file.fetch(until_eof=True):
             read_name = read.query_name
@@ -125,12 +116,8 @@ def process_bam_data_parallel(
     # Chromosome별 window 분할
     windows = []
     with pysam.AlignmentFile(bam_path, "rb") as bam:
-        #for chrom in selected_variants['Chromosome'].unique():
-        #    chrom_len = bam.get_reference_length(chrom)
-        chromosomes = list({v['Chromosome'] for v in selected_variants})  # 중복 제거
-        for chrom in chromosomes:
+        for chrom in selected_variants['Chromosome'].unique():
             chrom_len = bam.get_reference_length(chrom)
-
             for start in range(0, chrom_len, window_size):
                 end = min(start + window_size + padding, chrom_len)
                 windows.append((chrom, start, end))
@@ -138,7 +125,7 @@ def process_bam_data_parallel(
     # Window별 병렬 처리
     results = Parallel(n_jobs=num_cores)(
         delayed(process_window)(
-            bam_path, chrom, start, end, variants_dict, read_mapping, selected_read_unique_names, compute_missing_unknown
+            bam_path, chrom, start, end, variants_dict, read_mapping, compute_missing_unknown
         ) for chrom, start, end in windows
     )
     
@@ -152,44 +139,24 @@ def process_bam_data_parallel(
     
     return ref, alt, missing, unknown
 
-def process_window(bam_path, chrom, start, end, variants_dict, read_mapping, selected_reads, compute_missing_unknown):
+def process_window(bam_path, chrom, start, end, variants_dict, read_mapping, compute_missing_unknown):
     """개별 window 처리 함수"""
     window_variants = {k: v for k, v in variants_dict.items() if k[0] == chrom and start <= k[1] <= end}
     
-    with pysam.AlignmentFile(bam_path, "rb") as src_bam:
-        reads = list(src_bam.fetch(chrom, start, end))
+    with pysam.AlignmentFile(bam_path, "rb") as bam:
+        reads = list(bam.fetch(chrom, start, end))
     
-    # # 임시 파일 사용
-    # with tempfile.NamedTemporaryFile(mode='w+t', delete=True) as tmp:
-    #     for read in reads:
-    #         tmp.write(f"{read.to_string()}\n")
-    #     tmp.seek(0)
+    # 임시 파일 사용
+    with tempfile.NamedTemporaryFile(mode='w+t', delete=True) as tmp:
+        for read in reads:
+            tmp.write(f"{read.to_string()}\n")
+        tmp.seek(0)
         
-    #     return process_read_chunk(
-    #         tmp.name, 
-    #         set(selected_reads), 
-    #         window_variants, 
-    #         read_mapping, 
-    #         compute_missing_unknown
-    #     )
-    
-    # 원본 BAM에서 헤더 추출
-    with pysam.AlignmentFile(bam_path, "rb") as src_bam:
-        header = src_bam.header.to_dict()
-    
-    # 임시 BAM 파일 생성
-    with tempfile.NamedTemporaryFile(suffix='.bam', delete=True) as tmp_bam:
-        # 헤더 쓰기
-        with pysam.AlignmentFile(tmp_bam.name, "wb", header=header) as dest_bam:
-            for read in reads:
-                dest_bam.write(read)
-        
-        # 처리
         return process_read_chunk(
-            tmp_bam.name,
-            set(selected_reads),
-            window_variants,
-            read_mapping,
+            tmp.name, 
+            set(selected_reads), 
+            window_variants, 
+            read_mapping, 
             compute_missing_unknown
         )
 
