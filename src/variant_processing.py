@@ -201,3 +201,4 @@ def process_vcf_files(vcf_files_with_origins, chromosomes=None):
     union_variants = filter_variants(all_variants)
     
     return union_variants
+    

@@ -59,44 +59,106 @@ def process_read_chunk(
 
     return ref_classifications, alt_classifications, missing_classifications, unknown_classifications
 
+# def process_bam_data_parallel(
+#     bam_path, 
+#     selected_read_unique_names, 
+#     selected_variants, 
+#     read_mapping, 
+#     num_cores=4, 
+#     compute_missing_unknown=True
+# ):
+#     """
+#     Process BAM data in parallel and return classification results.
+#     """
+#     variants_dict = create_variants_dict(selected_variants)
+#     read_unique_names_chunks = split_list(selected_read_unique_names, num_cores)
+
+#     # Initialize result lists
+#     ref_classifications = []
+#     alt_classifications = []
+#     missing_classifications = []
+#     unknown_classifications = []
+
+#     # Parallel processing
+#     results = Parallel(n_jobs=num_cores, backend='multiprocessing')(
+#         delayed(process_read_chunk)(
+#             bam_path, 
+#             set(chunk), 
+#             variants_dict, 
+#             read_mapping, 
+#             compute_missing_unknown
+#         ) for chunk in read_unique_names_chunks
+#     )
+
+#     for result in results:
+#         ref_classifications.extend(result[0])
+#         alt_classifications.extend(result[1])
+#         missing_classifications.extend(result[2])
+#         unknown_classifications.extend(result[3])
+
+#     return ref_classifications, alt_classifications, missing_classifications, unknown_classifications
+
 def process_bam_data_parallel(
     bam_path, 
     selected_read_unique_names, 
     selected_variants, 
     read_mapping, 
     num_cores=4, 
-    compute_missing_unknown=True
+    compute_missing_unknown=True,
+    window_size=10000000,
+    padding=5000
 ):
     """
-    Process BAM data in parallel and return classification results.
+    Window 기반 병렬 처리 추가
     """
     variants_dict = create_variants_dict(selected_variants)
-    read_unique_names_chunks = split_list(selected_read_unique_names, num_cores)
+    
+    # Chromosome별 window 분할
+    windows = []
+    with pysam.AlignmentFile(bam_path, "rb") as bam:
+        for chrom in selected_variants['Chromosome'].unique():
+            chrom_len = bam.get_reference_length(chrom)
+            for start in range(0, chrom_len, window_size):
+                end = min(start + window_size + padding, chrom_len)
+                windows.append((chrom, start, end))
+    
+    # Window별 병렬 처리
+    results = Parallel(n_jobs=num_cores)(
+        delayed(process_window)(
+            bam_path, chrom, start, end, variants_dict, read_mapping, compute_missing_unknown
+        ) for chrom, start, end in windows
+    )
+    
+    # 결과 통합
+    ref, alt, missing, unknown = [], [], [], []
+    for res in results:
+        ref.extend(res[0])
+        alt.extend(res[1])
+        missing.extend(res[2])
+        unknown.extend(res[3])
+    
+    return ref, alt, missing, unknown
 
-    # Initialize result lists
-    ref_classifications = []
-    alt_classifications = []
-    missing_classifications = []
-    unknown_classifications = []
-
-    # Parallel processing
-    results = Parallel(n_jobs=num_cores, backend='multiprocessing')(
-        delayed(process_read_chunk)(
-            bam_path, 
-            set(chunk), 
-            variants_dict, 
+def process_window(bam_path, chrom, start, end, variants_dict, read_mapping, compute_missing_unknown):
+    """개별 window 처리 함수"""
+    window_variants = {k: v for k, v in variants_dict.items() if k[0] == chrom and start <= k[1] <= end}
+    
+    with pysam.AlignmentFile(bam_path, "rb") as bam:
+        reads = list(bam.fetch(chrom, start, end))
+    
+    # 임시 파일 사용
+    with tempfile.NamedTemporaryFile(mode='w+t', delete=True) as tmp:
+        for read in reads:
+            tmp.write(f"{read.to_string()}\n")
+        tmp.seek(0)
+        
+        return process_read_chunk(
+            tmp.name, 
+            set(selected_reads), 
+            window_variants, 
             read_mapping, 
             compute_missing_unknown
-        ) for chunk in read_unique_names_chunks
-    )
-
-    for result in results:
-        ref_classifications.extend(result[0])
-        alt_classifications.extend(result[1])
-        missing_classifications.extend(result[2])
-        unknown_classifications.extend(result[3])
-
-    return ref_classifications, alt_classifications, missing_classifications, unknown_classifications
+        )
 
 def process_read(read, variants_dict, compute_missing_unknown=True):
     ref_classifications_local = set()
