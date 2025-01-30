@@ -28,7 +28,8 @@ def main():
     barcode_path = args.barcode_path
     save_dir = args.save_dir
     num_cores = args.num_cores
-    
+    chromosomes = args.chromosomes  # New argument for chromosomes
+
     # Set compute_missing_unknown value
     compute_missing_unknown = not args.ref_alt_only
 
@@ -49,14 +50,14 @@ def main():
         # 1. Process variant files
         step_name = "Process variant files"
         start_time = log_step_start(step_name)
-        union_variants = process_vcf_files(vcf_files_with_origins)
+        union_variants = process_vcf_files(vcf_files_with_origins, chromosomes=chromosomes)
         log_step_end(step_name, start_time)
         
         # 2. Process BAM file
         step_name = "Process BAM file"
         start_time = log_step_start(step_name)
         # 2-1. Extract read information from the BAM file
-        df_reads = extract_reads_info(bam_path)
+        df_reads = extract_reads_info(bam_path, chromosomes=chromosomes)
         # 2-2. Create a mapping dictionary for Read_Name and Read_Unique_Name
         read_mapping = create_read_mapping(df_reads)
         log_step_end(step_name, start_time)
