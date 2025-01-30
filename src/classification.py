@@ -97,47 +97,53 @@ def process_read_chunk(
 #         unknown_classifications.extend(result[3])
 
 #     return ref_classifications, alt_classifications, missing_classifications, unknown_classifications
-
 def process_bam_data_parallel(
     bam_path, 
     selected_read_unique_names, 
     selected_variants, 
     read_mapping, 
     num_cores=4, 
-    compute_missing_unknown=True,
-    window_size=10000000,
-    padding=5000
+    compute_missing_unknown=True
 ):
-    """
-    Window 기반 병렬 처리 추가
-    """
     variants_dict = create_variants_dict(selected_variants)
-    
-    # Chromosome별 window 분할
-    windows = []
-    with pysam.AlignmentFile(bam_path, "rb") as bam:
-        for chrom in selected_variants['Chromosome'].unique():
-            chrom_len = bam.get_reference_length(chrom)
-            for start in range(0, chrom_len, window_size):
-                end = min(start + window_size + padding, chrom_len)
-                windows.append((chrom, start, end))
-    
-    # Window별 병렬 처리
-    results = Parallel(n_jobs=num_cores)(
-        delayed(process_window)(
-            bam_path, chrom, start, end, variants_dict, read_mapping, compute_missing_unknown
-        ) for chrom, start, end in windows
+
+    # 메모리 공유를 위한 청크 분할
+    chunk_factor = 4  # 코어당 4개 청크
+    chunks = np.array_split(
+        selected_read_unique_names, 
+        num_cores * chunk_factor
     )
-    
+
+    # 병렬 처리 설정
+    results = Parallel(
+        n_jobs=num_cores,
+        backend='loky',  # 메모리 공유 백엔드
+        temp_folder='/dev/shm',  # 공유 메모리 사용
+        max_nbytes='256M',  # 직렬화 크기 제한
+        prefer="processes"  # 프로세스 기반 병렬화
+    )(
+        delayed(process_read_chunk)(
+            bam_path, 
+            set(chunk), 
+            variants_dict, 
+            read_mapping, 
+            compute_missing_unknown
+        ) for chunk in chunks
+    )
+
     # 결과 통합
-    ref, alt, missing, unknown = [], [], [], []
-    for res in results:
-        ref.extend(res[0])
-        alt.extend(res[1])
-        missing.extend(res[2])
-        unknown.extend(res[3])
+    ref_classifications = []
+    alt_classifications = []
+    missing_classifications = []
+    unknown_classifications = []
     
-    return ref, alt, missing, unknown
+    for res in results:
+        ref_classifications.extend(res[0])
+        alt_classifications.extend(res[1])
+        missing_classifications.extend(res[2])
+        unknown_classifications.extend(res[3])
+        
+    return ref_classifications, alt_classifications, missing_classifications, unknown_classifications
 
 def process_window(bam_path, chrom, start, end, variants_dict, read_mapping, compute_missing_unknown):
     """개별 window 처리 함수"""

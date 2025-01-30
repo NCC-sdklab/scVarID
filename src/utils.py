@@ -150,6 +150,99 @@ def read_barcodes_from_file(barcode_path):
     else:
         return None  # Return None if barcode file is not provided
 
+# def save_classification_matrices(
+#     save_dir, 
+#     union_variants, 
+#     barcode_path=None, 
+#     ref_classifications=None, 
+#     alt_classifications=None, 
+#     missing_classifications=None, 
+#     unknown_classifications=None
+# ):
+#     """
+#     Save classified variant data.
+#     """
+#     # Extract variant list
+#     variants = [f"{variant['CHROM']}:{variant['POS']}_{variant['REF']}->{variant['ALT']}" for variant in union_variants]
+    
+#     #logging.info(f"Total variants: {len(variants)}")
+    
+#     # Create mapping dictionaries
+#     variant_to_index = {variant: idx for idx, variant in enumerate(variants)}
+    
+#     # Prepare classifications dictionary
+#     classifications_dict = {}
+#     if ref_classifications:
+#         classifications_dict['ref'] = ref_classifications
+#     if alt_classifications:
+#         classifications_dict['alt'] = alt_classifications
+#     if missing_classifications:
+#         classifications_dict['missing'] = missing_classifications
+#     if unknown_classifications:
+#         classifications_dict['unknown'] = unknown_classifications
+
+#     # Read barcodes from file or generate from data
+#     barcodes = read_barcodes_from_file(barcode_path)
+#     if barcodes is None:
+#         barcode_set = set()
+#         for classifications in classifications_dict.values():
+#             for classification in classifications:
+#                 classification_dict = dict(classification)
+#                 barcode = classification_dict['cell_barcode']
+#                 barcode_set.add(barcode)
+#         barcodes = sorted(barcode_set)
+#         logging.info(f"# Total barcodes generated from data: {len(barcodes)}")
+    
+#     barcode_to_index = {barcode: idx for idx, barcode in enumerate(barcodes)}
+    
+#     # Generate and save sparse matrices
+#     classification_matrices = {}
+    
+#     for classification_name, classifications in classifications_dict.items():
+#         if not classifications:
+#             logging.info(f"No data for classification '{classification_name}'. Skipping.")
+#             continue  # Skip if no data
+        
+#         data = []
+#         row_indices = []
+#         col_indices = []
+#         count_dict = defaultdict(int)
+    
+#         for classification in classifications:
+#             classification_dict = dict(classification)
+#             variant = classification_dict['variant']
+#             barcode = classification_dict['cell_barcode']
+            
+#             # Check if variant and barcode are in mapping dictionaries
+#             if variant in variant_to_index and barcode in barcode_to_index:
+#                 variant_idx = variant_to_index[variant]
+#                 barcode_idx = barcode_to_index[barcode]
+#                 key = (variant_idx, barcode_idx)
+#                 count_dict[key] += 1  # Increment read count
+#             else:
+#                 #logging.warning(f"Variant '{variant}' or barcode '{barcode}' not found in mapping dictionaries.")
+#                 continue
+    
+#         for (variant_idx, barcode_idx), count in count_dict.items():
+#             row_indices.append(variant_idx)
+#             col_indices.append(barcode_idx)
+#             data.append(count)
+    
+#         # Create sparse matrix
+#         matrix_shape = (len(variants), len(barcodes))
+#         matrix = csr_matrix((data, (row_indices, col_indices)), shape=matrix_shape)
+#         classification_matrices[classification_name] = matrix
+    
+#         # Save sparse matrix to h5 file
+#         with h5py.File(f'{save_dir}/{classification_name}_matrix.h5', 'w') as h5f:
+#             h5f.create_dataset('data', data=matrix.data)
+#             h5f.create_dataset('indices', data=matrix.indices)
+#             h5f.create_dataset('indptr', data=matrix.indptr)
+#             h5f.attrs['shape'] = matrix.shape
+    
+#     # Save variant and barcode lists
+#     joblib.dump((variants, barcodes), f'{save_dir}/variant_barcode_mappings.pkl')
+
 def save_classification_matrices(
     save_dir, 
     union_variants, 
@@ -157,91 +250,82 @@ def save_classification_matrices(
     ref_classifications=None, 
     alt_classifications=None, 
     missing_classifications=None, 
-    unknown_classifications=None
+    unknown_classifications=None,
+    chunk_size=100000  # 청크 크기 파라미터 추가
 ):
-    """
-    Save classified variant data.
-    """
-    # Extract variant list
-    variants = [f"{variant['CHROM']}:{variant['POS']}_{variant['REF']}->{variant['ALT']}" for variant in union_variants]
+    # 변수 초기화
+    variants = [f"{v['CHROM']}:{v['POS']}_{v['REF']}->{v['ALT']}" for v in union_variants]
+    variant_to_index = {v: i for i, v in enumerate(variants)}
     
-    #logging.info(f"Total variants: {len(variants)}")
-    
-    # Create mapping dictionaries
-    variant_to_index = {variant: idx for idx, variant in enumerate(variants)}
-    
-    # Prepare classifications dictionary
-    classifications_dict = {}
-    if ref_classifications:
-        classifications_dict['ref'] = ref_classifications
-    if alt_classifications:
-        classifications_dict['alt'] = alt_classifications
-    if missing_classifications:
-        classifications_dict['missing'] = missing_classifications
-    if unknown_classifications:
-        classifications_dict['unknown'] = unknown_classifications
+    # 바코드 처리
+    barcodes = read_barcodes_from_file(barcode_path) or sorted({
+        c['cell_barcode'] 
+        for cls in [ref_classifications, alt_classifications, 
+                   missing_classifications, unknown_classifications] 
+        if cls for c in cls
+    })
+    barcode_to_index = {b: i for i, b in enumerate(barcodes)}
 
-    # Read barcodes from file or generate from data
-    barcodes = read_barcodes_from_file(barcode_path)
-    if barcodes is None:
-        barcode_set = set()
-        for classifications in classifications_dict.values():
-            for classification in classifications:
-                classification_dict = dict(classification)
-                barcode = classification_dict['cell_barcode']
-                barcode_set.add(barcode)
-        barcodes = sorted(barcode_set)
-        logging.info(f"# Total barcodes generated from data: {len(barcodes)}")
-    
-    barcode_to_index = {barcode: idx for idx, barcode in enumerate(barcodes)}
-    
-    # Generate and save sparse matrices
-    classification_matrices = {}
-    
-    for classification_name, classifications in classifications_dict.items():
-        if not classifications:
-            logging.info(f"No data for classification '{classification_name}'. Skipping.")
-            continue  # Skip if no data
-        
-        data = []
-        row_indices = []
-        col_indices = []
-        count_dict = defaultdict(int)
-    
-        for classification in classifications:
-            classification_dict = dict(classification)
-            variant = classification_dict['variant']
-            barcode = classification_dict['cell_barcode']
+    # 분류별 처리
+    classifications = {
+        'ref': ref_classifications,
+        'alt': alt_classifications,
+        'missing': missing_classifications,
+        'unknown': unknown_classifications
+    }
+
+    for cls_name, cls_data in classifications.items():
+        if not cls_data:
+            continue
+
+        h5_path = f'{save_dir}/{cls_name}_matrix.h5'
+        first_chunk = True
+
+        # 청크 단위 처리
+        for i in range(0, len(cls_data), chunk_size):
+            chunk = cls_data[i:i+chunk_size]
             
-            # Check if variant and barcode are in mapping dictionaries
-            if variant in variant_to_index and barcode in barcode_to_index:
-                variant_idx = variant_to_index[variant]
-                barcode_idx = barcode_to_index[barcode]
-                key = (variant_idx, barcode_idx)
-                count_dict[key] += 1  # Increment read count
-            else:
-                #logging.warning(f"Variant '{variant}' or barcode '{barcode}' not found in mapping dictionaries.")
-                continue
-    
-        for (variant_idx, barcode_idx), count in count_dict.items():
-            row_indices.append(variant_idx)
-            col_indices.append(barcode_idx)
-            data.append(count)
-    
-        # Create sparse matrix
-        matrix_shape = (len(variants), len(barcodes))
-        matrix = csr_matrix((data, (row_indices, col_indices)), shape=matrix_shape)
-        classification_matrices[classification_name] = matrix
-    
-        # Save sparse matrix to h5 file
-        with h5py.File(f'{save_dir}/{classification_name}_matrix.h5', 'w') as h5f:
-            h5f.create_dataset('data', data=matrix.data)
-            h5f.create_dataset('indices', data=matrix.indices)
-            h5f.create_dataset('indptr', data=matrix.indptr)
-            h5f.attrs['shape'] = matrix.shape
-    
-    # Save variant and barcode lists
+            data = []
+            rows = []
+            cols = []
+            count_dict = defaultdict(int)
+
+            # 현재 청크 처리
+            for entry in chunk:
+                var = entry['variant']
+                bcd = entry['cell_barcode']
+                if var in variant_to_index and bcd in barcode_to_index:
+                    key = (variant_to_index[var], barcode_to_index[bcd])
+                    count_dict[key] += 1
+
+            # CSR 형식으로 변환
+            for (r, c), cnt in count_dict.items():
+                data.append(cnt)
+                rows.append(r)
+                cols.append(c)
+
+            # HDF5 저장
+            with h5py.File(h5_path, 'a') as h5f:
+                if first_chunk:
+                    # 첫 청크: 데이터셋 생성
+                    h5f.create_dataset('data', data=data, maxshape=(None,))
+                    h5f.create_dataset('indices', data=rows, maxshape=(None,))
+                    h5f.create_dataset('indptr', data=[0, len(cols)], maxshape=(None,))
+                    h5f.attrs['shape'] = (len(variants), len(barcodes))
+                    first_chunk = False
+                else:
+                    # 추가 청크: 데이터 확장
+                    for ds_name, new_data in [('data', data), ('indices', rows)]:
+                        h5f[ds_name].resize((h5f[ds_name].shape[0] + len(new_data),))
+                        h5f[ds_name][-len(new_data):] = new_data
+                    
+                    # indptr 업데이트
+                    h5f['indptr'].resize((h5f['indptr'].shape[0] + 1,))
+                    h5f['indptr'][-1] = h5f['indptr'][-2] + len(cols)
+
+    # 매핑 정보 저장
     joblib.dump((variants, barcodes), f'{save_dir}/variant_barcode_mappings.pkl')
+
 
 def get_all_chromosomes(bam_path, variant_paths=None):
     """
