@@ -5,6 +5,7 @@ import re
 from collections import defaultdict
 from joblib import Parallel, delayed
 import pysam
+import tempfile
 
 def split_list(lst, num_sublists):
     avg_size = len(lst) // num_sublists
