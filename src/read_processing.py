@@ -132,54 +132,45 @@ def calculate_end_position_cigar(read):
 
 # read_processing.py의 extract_reads_info 함수 수정
 
-def extract_reads_info(bam_file, chromosomes=None):
+def extract_reads_info(bam_file, chromosomes=None, window_size=10_000_000, padding=5_000_000):
     data = []
     read_name_counts = {}
     
     with pysam.AlignmentFile(bam_file, "rb") as bam:
-        for read in bam.fetch():
-            try:
-                barcode = read.get_tag("CB")
-                chrom = bam.get_reference_name(read.reference_id)
+        target_chroms = chromosomes if chromosomes else bam.references
+        
+        for chrom in target_chroms:
+            chrom_length = bam.get_reference_length(chrom)
+            
+            for win_start in range(0, chrom_length, window_size):
+                win_end = min(win_start + window_size + padding, chrom_length)
                 
-                if chromosomes and chrom not in chromosomes:
-                    continue
-                
-                # 범주형 데이터 변환 적용
-                read_name = str(read.query_name)  # 명시적 문자열 변환
-                if read_name in read_name_counts:
-                    read_name_counts[read_name] += 1
-                else:
-                    read_name_counts[read_name] = 1
-                
-                unique_id = read_name_counts[read_name] - 1
-                read_unique_name = f"{read_name}_{unique_id}"
-                
-                data.append([
-                    read_name,
-                    read_unique_name,
-                    str(barcode),  # barcode 문자열 변환
-                    chrom,
-                    read.reference_start,
-                    calculate_end_position_cigar(read)
-                ])
-                
-            except KeyError:
-                continue
-
-    # 메모리 효율적 DataFrame 생성
-    df_reads = pd.DataFrame(
-        data,
-        columns=["Read_Name", "Read_Unique_Name", "Cell_Barcode", 
-                 "Chromosome", "Start_Position", "End_Position"],
-        dtype={
-            'Chromosome': 'category',
-            'Cell_Barcode': 'category',
-            'Read_Name': 'object',
-            'Read_Unique_Name': 'object'
-        }
-    )
+                for read in bam.fetch(chrom, win_start, win_end):
+                    try:
+                        barcode = read.get_tag("CB")
+                    except KeyError:
+                        continue
+                    
+                    read_start = read.reference_start
+                    read_end = calculate_end_position_cigar(read)
+                    
+                    if read_end < win_start or read_start >= (win_start + window_size):
+                        continue
+                    
+                    read_name = read.query_name
+                    if read_name in read_name_counts:
+                        read_name_counts[read_name] += 1
+                    else:
+                        read_name_counts[read_name] = 1
+                    unique_id = read_name_counts[read_name] - 1
+                    read_unique_name = f"{read_name}_{unique_id}"
+                    
+                    data.append([read_name, read_unique_name, barcode, chrom, read_start, read_end])
+    
+    df_reads = pd.DataFrame(data, columns=["Read_Name", "Read_Unique_Name", "Cell_Barcode", "Chromosome", "Start_Position", "End_Position"])
+    logging.info(f"Extracted {len(df_reads)} reads from BAM file: {bam_file}")
     return df_reads
+
 
 
 def create_read_mapping(df_reads):

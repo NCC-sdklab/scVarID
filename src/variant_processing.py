@@ -42,7 +42,7 @@ def is_vcf_file(file_path):
 #     logging.info(f"Extracted {len(formatted_variants)} variants from {vcf_file}")
 #     return formatted_variants
 
-def extract_variants_vcf(vcf_file, origin, chromosomes=None, window_size=10_000_000, padding=5_000):
+def extract_variants_vcf(vcf_file, origin, chromosomes=None, window_size=10_000_000, padding=5_000_000):
     formatted_variants = []
     
     try:

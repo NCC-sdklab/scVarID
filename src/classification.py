@@ -5,6 +5,8 @@ import re
 from collections import defaultdict
 from joblib import Parallel, delayed
 import pysam
+import tempfile
+import numpy as np
 
 def split_list(lst, num_sublists):
     avg_size = len(lst) // num_sublists
@@ -364,3 +366,26 @@ def handle_deletion(sequences, positions, operations, pos, ref, alt, read_name, 
         return 'unknown', cell_barcode, pos, read_name
 
     return 'unknown', cell_barcode, pos, read_name
+
+# classification.py에 추가할 보조 함수
+
+def create_variants_dict(selected_variants):
+    variants_dict = defaultdict(list)
+    for variant in selected_variants:
+        chrom = variant['Chromosome']
+        pos = int(variant['POS'])
+        ref = variant['REF']
+        alt_list = variant['ALT'].split(',')
+        
+        for alt in alt_list:
+            key = (chrom, pos)
+            variant_type = (
+                'deletion' if len(ref) > len(alt) else
+                'insertion' if len(ref) < len(alt) else 
+                'snv'
+            )
+            variants_dict[key].append({
+                'variant': (chrom, pos, ref, alt),
+                'type': variant_type
+            })
+    return variants_dict
