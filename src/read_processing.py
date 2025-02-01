@@ -17,161 +17,44 @@ def calculate_end_position_cigar(read):
             ref_pos += length
     return ref_pos
 
-# def extract_reads_info(bam_file, chromosomes=None):
-#     """
-#     Extract read information from a BAM file.
-#     """
-#     data = []
-#     read_name_counts = {}
-    
-#     with pysam.AlignmentFile(bam_file, "rb") as bam:
-#         for read in bam.fetch():
-#             try:
-#                 barcode = read.get_tag("CB")  # Extract the "CB" tag for the cell barcode
-#             except KeyError:
-#                 continue  # Skip reads without a "CB" tag
-            
-#             chrom = bam.get_reference_name(read.reference_id)
-            
-#             # Skip reads that are not in the specified chromosomes
-#             if chromosomes and chrom not in chromosomes:
-#                 continue
-            
-#             start_pos = read.reference_start
-#             end_pos = calculate_end_position_cigar(read)  # Helper function to compute end position
-#             read_name = read.query_name
-            
-#             # Count occurrences of each read name
-#             if read_name in read_name_counts:
-#                 read_name_counts[read_name] += 1
-#             else:
-#                 read_name_counts[read_name] = 1
-#             unique_id = read_name_counts[read_name] - 1  # Start numbering from 0
-            
-#             read_unique_name = f"{read_name}_{unique_id}"
-#             data.append([read.query_name, read_unique_name, barcode, chrom, start_pos, end_pos])
-    
-#     # Convert to a DataFrame
-#     df_reads = pd.DataFrame(data, columns=["Read_Name", "Read_Unique_Name", "Cell_Barcode", "Chromosome", "Start_Position", "End_Position"])
-#     logging.info(f"Extracted {len(df_reads)} reads from BAM file: {bam_file}")
-#     return df_reads
-
-# def extract_reads_info(bam_file, chromosomes=None, window_size=10_000_000, padding=5_000):
-#     data = []
-#     read_name_counts = {}
-    
-#     with pysam.AlignmentFile(bam_file, "rb") as bam:
-#         target_chroms = chromosomes if chromosomes else bam.references
-        
-#         for chrom in target_chroms:
-#             chrom_length = bam.get_reference_length(chrom)
-            
-#             # Window 단위 처리
-#             for win_start in range(0, chrom_length, window_size):
-#                 win_end = min(win_start + window_size + padding, chrom_length)
-                
-#                 # Read fetch (0-based)
-#                 for read in bam.fetch(chrom, win_start, win_end):
-#                     try:
-#                         barcode = read.get_tag("CB")
-#                     except KeyError:
-#                         continue
-                    
-#                     # Read 좌표 계산
-#                     read_start = read.reference_start
-#                     read_end = calculate_end_position_cigar(read)
-                    
-#                     # 실제 window 범위 필터링 (padding 영역 제외)
-#                     if read_end < win_start or read_start >= (win_start + window_size):
-#                         continue
-                    
-#                     # Read 정보 저장
-#                     read_name = read.query_name
-#                     if read_name in read_name_counts:
-#                         read_name_counts[read_name] += 1
-#                     else:
-#                         read_name_counts[read_name] = 1
-#                     unique_id = read_name_counts[read_name] - 1
-#                     read_unique_name = f"{read_name}_{unique_id}"
-                    
-#                     data.append([read_name, read_unique_name, barcode, chrom, read_start, read_end])
-    
-#     df_reads = pd.DataFrame(data, columns=["Read_Name", "Read_Unique_Name", "Cell_Barcode", "Chromosome", "Start_Position", "End_Position"])
-#     logging.info(f"Extracted {len(df_reads)} reads from BAM file: {bam_file}")
-#     return df_reads    
-
-# Generator 기반 스트리밍 처리
-# def extract_reads_info(bam_file, chromosomes=None):
-#     read_name_counts = {}
-    
-#     with pysam.AlignmentFile(bam_file, "rb") as bam:
-#         for read in bam:
-#             try:
-#                 barcode = read.get_tag("CB")
-#                 chrom = bam.get_reference_name(read.reference_id)
-                
-#                 if chromosomes and chrom not in chromosomes:
-#                     continue
-                
-#                 # 즉시 처리 후 메모리에서 해제
-#                 read_name = read.query_name
-#                 unique_id = read_name_counts.get(read_name, 0)
-#                 read_name_counts[read_name] = unique_id + 1
-                
-#                 yield [
-#                     read_name,
-#                     f"{read_name}_{unique_id}",
-#                     barcode,
-#                     chrom,
-#                     read.reference_start,
-#                     calculate_end_position_cigar(read)
-#                 ]
-                
-#             except KeyError:
-#                 continue
-
-# read_processing.py의 extract_reads_info 함수 수정
-
-def extract_reads_info(bam_file, chromosomes=None, window_size=10_000_000, padding=5_000_000):
+def extract_reads_info(bam_file, chromosomes=None):
+    """
+    Extract read information from a BAM file.
+    """
     data = []
     read_name_counts = {}
     
     with pysam.AlignmentFile(bam_file, "rb") as bam:
-        target_chroms = chromosomes if chromosomes else bam.references
-        
-        for chrom in target_chroms:
-            chrom_length = bam.get_reference_length(chrom)
+        for read in bam.fetch():
+            try:
+                barcode = read.get_tag("CB")  # Extract the "CB" tag for the cell barcode
+            except KeyError:
+                continue  # Skip reads without a "CB" tag
             
-            for win_start in range(0, chrom_length, window_size):
-                win_end = min(win_start + window_size + padding, chrom_length)
-                
-                for read in bam.fetch(chrom, win_start, win_end):
-                    try:
-                        barcode = read.get_tag("CB")
-                    except KeyError:
-                        continue
-                    
-                    read_start = read.reference_start
-                    read_end = calculate_end_position_cigar(read)
-                    
-                    if read_end < win_start or read_start >= (win_start + window_size):
-                        continue
-                    
-                    read_name = read.query_name
-                    if read_name in read_name_counts:
-                        read_name_counts[read_name] += 1
-                    else:
-                        read_name_counts[read_name] = 1
-                    unique_id = read_name_counts[read_name] - 1
-                    read_unique_name = f"{read_name}_{unique_id}"
-                    
-                    data.append([read_name, read_unique_name, barcode, chrom, read_start, read_end])
+            chrom = bam.get_reference_name(read.reference_id)
+            
+            # Skip reads that are not in the specified chromosomes
+            if chromosomes and chrom not in chromosomes:
+                continue
+            
+            start_pos = read.reference_start
+            end_pos = calculate_end_position_cigar(read)  # Helper function to compute end position
+            read_name = read.query_name
+            
+            # Count occurrences of each read name
+            if read_name in read_name_counts:
+                read_name_counts[read_name] += 1
+            else:
+                read_name_counts[read_name] = 1
+            unique_id = read_name_counts[read_name] - 1  # Start numbering from 0
+            
+            read_unique_name = f"{read_name}_{unique_id}"
+            data.append([read.query_name, read_unique_name, barcode, chrom, start_pos, end_pos])
     
+    # Convert to a DataFrame
     df_reads = pd.DataFrame(data, columns=["Read_Name", "Read_Unique_Name", "Cell_Barcode", "Chromosome", "Start_Position", "End_Position"])
     logging.info(f"Extracted {len(df_reads)} reads from BAM file: {bam_file}")
     return df_reads
-
-
 
 def create_read_mapping(df_reads):
     """
