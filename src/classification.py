@@ -111,6 +111,7 @@ def process_bam_data_parallel(
 
     # 메모리 공유를 위한 청크 분할
     chunk_factor = 4  # 코어당 4개 청크
+    #chunk_factor = 8  # 코어당 8개 청크
     chunks = np.array_split(
         selected_read_unique_names, 
         num_cores * chunk_factor
@@ -120,7 +121,8 @@ def process_bam_data_parallel(
     results = Parallel(
         n_jobs=num_cores,
         backend='loky',  # 메모리 공유 백엔드
-        temp_folder='/dev/shm',  # 공유 메모리 사용
+        #temp_folder='/dev/shm',  # 공유 메모리 사용
+        temp_folder='/tmp',  # 공유 메모리 사용
         max_nbytes='256M',  # 직렬화 크기 제한
         prefer="processes"  # 프로세스 기반 병렬화
     )(
