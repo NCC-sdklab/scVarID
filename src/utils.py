@@ -11,6 +11,7 @@ import joblib
 from scipy.sparse import csr_matrix
 import argparse
 import pysam
+import sys
 
 # def parse_arguments():
 #     """
@@ -89,11 +90,31 @@ def parse_arguments():
     
     return args, vcf_files_with_origins
 
+# def setup_logging(save_dir):
+#     """
+#     Initializes the logging settings.
+#     Sets up both log file and console output.
+#     """
+#     log_file = os.path.join(save_dir, 'processing.log')
+    
+#     # Use RotatingFileHandler to limit log file size and create backups
+#     handler = RotatingFileHandler(log_file, maxBytes=10**7, backupCount=5)
+    
+#     logging.basicConfig(
+#         level=logging.INFO,
+#         format='%(asctime)s:%(levelname)s:%(message)s',
+#         handlers=[
+#             handler,
+#             logging.StreamHandler()
+#         ]
+#     )
+
 def setup_logging(save_dir):
     """
     Initializes the logging settings.
     Sets up both log file and console output.
     """
+    import sys  # setup_logging 내에서 sys 사용
     log_file = os.path.join(save_dir, 'processing.log')
     
     # Use RotatingFileHandler to limit log file size and create backups
@@ -107,6 +128,10 @@ def setup_logging(save_dir):
             logging.StreamHandler()
         ]
     )
+    
+    # 명령줄 인자를 로그에 기록 (추가된 부분)
+    logging.info("Command Line: " + " ".join(sys.argv))
+    
 
 def log_step_start(step_name):
     """
