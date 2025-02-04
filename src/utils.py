@@ -130,8 +130,7 @@ def setup_logging(save_dir):
     )
     
     # 명령줄 인자를 로그에 기록 (추가된 부분)
-    #logging.info("Command Line: " + " ".join(sys.argv))
-    logging.info("" + " ".join(sys.argv))
+    logging.info("Command Line: " + " ".join(sys.argv))
     
 
 def log_step_start(step_name):
